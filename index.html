@@ -122,6 +122,8 @@
     .badge-dim { background: rgba(255,255,255,0.04); border: 1px solid var(--border); color: var(--dim); }
 
     .header-btns { display: flex; gap: 8px; align-items: center; }
+    .btn-label-short { display: none; }
+    .btn-label-full  { display: inline; }
     .btn-sm {
       padding: 7px 14px; border-radius: 8px;
       font-size: 11px; font-family: 'Sora', sans-serif; font-weight: 600;
@@ -147,6 +149,45 @@
     }
     @media(max-width: 820px) {
       .app-body { grid-template-columns: 1fr; padding: 16px; }
+    }
+
+    /* ── MOBILE ────────────────────────────────── */
+    @media(max-width: 600px) {
+      .app-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+        padding: 10px 14px;
+      }
+      .app-header-left .title { font-size: 13px; }
+      .header-btns {
+        width: 100%;
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+      .btn-sm {
+        padding: 7px 10px;
+        font-size: 10px;
+        flex: 1 1 auto;
+        min-width: 0;
+        text-align: center;
+        white-space: nowrap;
+      }
+      /* Botões: troca texto longo por curto no mobile */
+      .btn-label-short { display: inline; }
+      .btn-label-full  { display: none; }
+
+      .stat-box { padding: 12px 8px; }
+      .stat-val  { font-size: 14px; }
+      .stat-lbl  { font-size: 9px; }
+
+      .form-row  { grid-template-columns: 1fr; }
+      .app-body  { padding: 10px; gap: 12px; }
+
+      /* tabela: oculta colunas menos importantes */
+      .hist-tbl .col-bruto,
+      .hist-tbl .col-var   { display: none; }
+      .hist-tbl th, .hist-tbl td { padding: 8px 6px; font-size: 11px; }
     }
     .col-left { display: flex; flex-direction: column; gap: 16px; }
     .col-right { display: flex; flex-direction: column; gap: 16px; }
@@ -409,11 +450,11 @@
       <div class="sync" id="syncStatus">Carregando...</div>
     </div>
     <div class="header-btns">
-      <button class="btn-sm btn-sm-sync" onclick="syncData()" id="btnSync">⟳ Sincronizar</button>
-      <button class="btn-sm btn-sm-import" onclick="document.getElementById('fileImport').click()" title="Importar backup do Dashboard principal">⬆ Importar Dashboard</button>
+      <button class="btn-sm btn-sm-sync" onclick="syncData()" id="btnSync">⟳ <span class="btn-label-full">Sincronizar</span><span class="btn-label-short">Sync</span></button>
+      <button class="btn-sm btn-sm-import" onclick="document.getElementById('fileImport').click()" title="Importar backup do Dashboard principal">⬆ <span class="btn-label-full">Importar Dashboard</span><span class="btn-label-short">Importar</span></button>
       <input type="file" id="fileImport" accept=".json" style="display:none" onchange="importFromDashboard(this)">
-      <button class="btn-sm btn-sm-export" onclick="exportForDashboard()">⬇ Exportar Dashboard</button>
-      <button class="btn-sm btn-sm-logout" onclick="doLogout()">Sair →</button>
+      <button class="btn-sm btn-sm-export" onclick="exportForDashboard()">⬇ <span class="btn-label-full">Exportar Dashboard</span><span class="btn-label-short">Exportar</span></button>
+      <button class="btn-sm btn-sm-logout" onclick="doLogout()">→ <span class="btn-label-full">Sair</span><span class="btn-label-short">Sair</span></button>
     </div>
   </header>
 
