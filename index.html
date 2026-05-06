@@ -451,8 +451,8 @@
     </div>
     <div class="header-btns">
       <button class="btn-sm btn-sm-sync" onclick="syncData()" id="btnSync">⟳ <span class="btn-label-full">Sincronizar</span><span class="btn-label-short">Sync</span></button>
-      <button class="btn-sm btn-sm-import" onclick="document.getElementById('fileImport').click()" title="Importar backup do Dashboard principal">⬆ <span class="btn-label-full">Importar Dashboard</span><span class="btn-label-short">Importar</span></button>
-      <input type="file" id="fileImport" accept=".json" style="display:none" onchange="importFromDashboard(this)">
+      <label for="fileImport" class="btn-sm btn-sm-import" title="Importar backup do Dashboard principal" style="cursor:pointer">⬆ <span class="btn-label-full">Importar Dashboard</span><span class="btn-label-short">Importar</span></label>
+      <input type="file" id="fileImport" accept=".json,application/json,text/plain,*/*" style="display:none" onchange="importFromDashboard(this)">
       <button class="btn-sm btn-sm-export" onclick="exportForDashboard()">⬇ <span class="btn-label-full">Exportar Dashboard</span><span class="btn-label-short">Exportar</span></button>
       <button class="btn-sm btn-sm-logout" onclick="doLogout()">→ <span class="btn-label-full">Sair</span><span class="btn-label-short">Sair</span></button>
     </div>
