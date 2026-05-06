@@ -491,13 +491,13 @@
       <div class="card">
         <div class="card-hd">📅 Registrar Saldo do Dia Anterior</div>
 
-        <!-- Data + Mês em linha -->
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
-          <div class="field" style="flex:1;margin-bottom:0">
-            <label>Data</label>
-            <input type="date" id="fData" onchange="onDateChange()" style="padding:8px 10px;font-size:13px">
+        <!-- Data + Mês -->
+        <div class="field" style="margin-bottom:10px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+            <label style="margin-bottom:0">Data</label>
+            <div id="mesBadge" style="background:rgba(124,155,232,0.12);border-radius:20px;padding:4px 11px;font-size:11px;font-weight:600;color:var(--blue)">—</div>
           </div>
-          <div id="mesBadge" style="margin-top:18px;background:rgba(124,155,232,0.12);border-radius:20px;padding:6px 12px;font-size:12px;font-weight:600;color:var(--blue);white-space:nowrap;flex-shrink:0">—</div>
+          <input type="date" id="fData" onchange="onDateChange()" style="padding:9px 12px;font-size:14px;width:100%">
           <input type="hidden" id="fMes">
         </div>
 
