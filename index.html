@@ -491,28 +491,31 @@
       <div class="card">
         <div class="card-hd">📅 Registrar Saldo do Dia Anterior</div>
 
-        <div class="form-row">
-          <div class="field">
+        <!-- Data + Mês em linha -->
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+          <div class="field" style="flex:1;margin-bottom:0">
             <label>Data</label>
             <input type="date" id="fData" onchange="onDateChange()">
           </div>
-          <div class="field">
-            <label>Mês (automático)</label>
-            <input type="text" id="fMes" readonly placeholder="Abr/26">
+          <div id="mesBadge" style="margin-top:18px;background:rgba(124,155,232,0.12);border-radius:20px;padding:7px 13px;font-size:12px;font-weight:600;color:var(--blue);white-space:nowrap">—</div>
+          <input type="hidden" id="fMes">
+        </div>
+
+        <!-- Bruto + Líquido lado a lado -->
+        <div class="form-row" style="margin-bottom:10px">
+          <div class="field" style="margin-bottom:0">
+            <label>Bruto (R$)</label>
+            <input type="text" id="fBruto" placeholder="15.600.000,00" oninput="calcRend()">
+          </div>
+          <div class="field" style="margin-bottom:0">
+            <label>Líquido (R$)</label>
+            <input type="text" id="fLiq" placeholder="15.544.343,34" oninput="calcRend()">
           </div>
         </div>
 
         <div class="field">
-          <label>Saldo Bruto (R$)</label>
-          <input type="text" id="fBruto" placeholder="Ex: 15.600.000,00" oninput="calcRend()">
-        </div>
-        <div class="field">
-          <label>Saldo Líquido (R$)</label>
-          <input type="text" id="fLiq" placeholder="Ex: 15.544.343,34" oninput="calcRend()">
-        </div>
-        <div class="field">
-          <label>Resgates do Dia (R$)</label>
-          <input type="text" id="fResg" placeholder="Ex: 15.000,00 ou deixe vazio" oninput="calcRend()">
+          <label>Resgates (opcional)</label>
+          <input type="text" id="fResg" placeholder="0,00 ou deixe vazio" oninput="calcRend()">
         </div>
 
         <div class="rend-box" id="rendBox">Rendimento calculado: —</div>
@@ -952,7 +955,10 @@ function updateSyncBadge() {
 function onDateChange() {
   var d = document.getElementById('fData').value;
   if (!d) return;
-  document.getElementById('fMes').value = dateToMes(d);
+  var mes = dateToMes(d);
+  document.getElementById('fMes').value = mes;
+  var badge = document.getElementById('mesBadge');
+  if (badge) badge.textContent = mes;
   prefillFromHistory();
   calcRend();
 }
@@ -1238,74 +1244,93 @@ function renderViewMes() {
 }
 
 // ══════════════════════════════════════════════════════════
-//  VISÃO 2: POR DIA — entradas diárias do mês selecionado
+//  VISÃO 2: CARDS POR MÊS (substituiu tabela Por Dia)
 // ══════════════════════════════════════════════════════════
 function renderViewDia() {
   var container = document.getElementById('rendContainer');
   var sumario   = document.getElementById('rendSumario');
-  var sel       = document.getElementById('filtroMes');
   var sorted    = APP.data.slice().sort(function(a,b){ return a.data < b.data ? -1 : 1; });
 
-  // Popula o seletor de meses
-  var mesesUnicos = [];
-  sorted.forEach(function(e) { if (mesesUnicos.indexOf(e.mes) === -1) mesesUnicos.push(e.mes); });
-  mesesUnicos.reverse();
-  var selAtual = sel.value;
-  sel.innerHTML = mesesUnicos.map(function(m){
-    return '<option value="' + m + '"' + (m===selAtual?' selected':'') + '>' + m + '</option>';
-  }).join('');
-
-  // Seleciona mês atual se nada selecionado
-  if (!sel.value && mesesUnicos.length) {
-    var mesFiltro = document.getElementById('fMes').value || '';
-    sel.value = (mesFiltro && mesesUnicos.indexOf(mesFiltro) !== -1) ? mesFiltro : mesesUnicos[0];
-  }
-
-  var filtro   = sel.value;
-  var filtrado = filtro ? sorted.filter(function(e){ return e.mes === filtro; }) : sorted;
-  var d        = filtrado.slice().reverse();
-
-  if (!d.length) {
-    container.innerHTML = '<div class="empty-msg"><span class="icon">📋</span>Nenhum registro para este mês.<br>Faça o primeiro registro ao lado.</div>';
+  if (!sorted.length) {
+    container.innerHTML = '<div class="empty-msg"><span class="icon">📋</span>Nenhum registro ainda.<br>Faça o primeiro registro ao lado.</div>';
     sumario.textContent = ''; return;
   }
 
-  var totalRend = filtrado.reduce(function(s,e){ return s+(e.rendimento||0); }, 0);
-  var positivos = filtrado.filter(function(e){ return (e.rendimento||0)>0; }).length;
-  sumario.innerHTML =
-    '<span style="color:var(--green)">↑ ' + positivos + '/' + d.length + ' dias positivos</span>' +
-    ' &nbsp;·&nbsp; Total: <strong style="color:' + (totalRend>=0?'var(--green)':'var(--red)') + '">' +
-    (totalRend>0?'+':'') + fmt(totalRend) + '</strong>';
+  // Agrupa por mês (mais recente primeiro)
+  var grupos = {}, ordem = [];
+  sorted.forEach(function(e) {
+    if (!grupos[e.mes]) { grupos[e.mes] = []; ordem.push(e.mes); }
+    grupos[e.mes].push(e);
+  });
+  ordem.reverse();
 
-  var html = '<div style="overflow-x:auto"><table class="hist-tbl"><thead><tr>' +
-    '<th>Data</th><th>Mês</th>' +
-    '<th style="text-align:right">Saldo Bruto</th>' +
-    '<th style="text-align:right">Saldo Líquido</th>' +
-    '<th style="text-align:right">Rendimento</th>' +
-    '<th style="text-align:right">Variação</th>' +
-    '<th style="text-align:right">Resgates</th>' +
-    '<th></th></tr></thead><tbody>';
+  var totalRend = sorted.reduce(function(s,e){ return s+(e.rendimento||0); }, 0);
+  sumario.innerHTML = ordem.length + ' meses &nbsp;·&nbsp; Total: <strong style="color:' +
+    (totalRend>=0?'var(--green)':'var(--red)') + '">' + (totalRend>0?'+':'') + fmt(totalRend) + '</strong>';
 
-  d.forEach(function(e) {
-    var dsp  = new Date(e.data + 'T12:00:00').toLocaleDateString('pt-BR', {day:'2-digit',month:'2-digit',year:'2-digit'});
-    var rend = e.rendimento || 0;
-    var resg = e.resgates   || 0;
-    var prevIdx = sorted.findIndex(function(x){ return x.data===e.data && x.mes===e.mes; }) - 1;
-    var prevLiq = prevIdx >= 0 ? (sorted[prevIdx].saldoLiq || 0) : 0;
-    var variacao = prevLiq > 0 ? (e.saldoLiq - prevLiq) : null;
+  var html = '';
+  ordem.forEach(function(mes) {
+    var entr     = grupos[mes].slice().reverse(); // mais recente primeiro
+    var rendAcum = grupos[mes].reduce(function(s,e){ return s+(e.rendimento||0); }, 0);
 
-    html += '<tr>' +
-      '<td style="font-size:12px;white-space:nowrap">' + dsp + '</td>' +
-      '<td><span style="color:var(--yellow);font-size:11px;font-weight:600">' + e.mes + '</span></td>' +
-      cel(e.saldoBruto, false) + cel(e.saldoLiq, false) +
-      cel(rend, true) +
-      (variacao !== null ? cel(variacao, true) : '<td style="text-align:right;color:var(--dim)">—</td>') +
-      '<td style="text-align:right;font-size:12px;color:' + (resg?'var(--red)':'var(--dim)') + '">' + (resg?fmt(resg):'—') + '</td>' +
-      '<td><button class="btn-del" onclick="deleteEntry(\'' + e.data + '\',\'' + e.mes + '\')" title="Remover">✕</button></td>' +
-      '</tr>';
+    // Saldo Mês = último saldoLiq - saldoLiq inicial do mês (primeiro entry do mês anterior ou primeiro do mês)
+    var mesIdx   = ordem.indexOf(mes);
+    var mesReal  = ordem.slice().reverse().indexOf(mes); // índice na ordem original (crescente)
+    var ordOriginal = ordem.slice().reverse();
+    var idxOriginal = ordOriginal.indexOf(mes);
+    var prevMes  = idxOriginal > 0 ? ordOriginal[idxOriginal - 1] : null;
+    var saldoInicial = prevMes ? (grupos[prevMes][grupos[prevMes].length-1].saldoLiq || 0) : 0;
+    var saldoFinal   = grupos[mes][grupos[mes].length-1].saldoLiq || 0;
+    var saldoMes     = saldoInicial > 0 ? (saldoFinal - saldoInicial) : null;
+    var corRend  = rendAcum >= 0 ? 'var(--green)' : 'var(--red)';
+    var sinalRend = rendAcum > 0 ? '+' : '';
+
+    // Cabeçalho do mês
+    html += '<div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:14px;padding:14px 16px;margin-bottom:8px">';
+    html += '<div style="font-size:13px;font-weight:700;color:var(--yellow);margin-bottom:10px">' + mes + '</div>';
+    html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">';
+    html += '<div style="background:rgba(255,255,255,0.03);border-radius:10px;padding:10px 12px">';
+    html += '<div style="font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:4px">Rendimento mês</div>';
+    html += '<div style="font-size:15px;font-weight:700;color:'+corRend+'">' + sinalRend + fmt(rendAcum) + '</div>';
+    html += '</div>';
+    if (saldoMes !== null) {
+      var corSaldo = saldoMes >= 0 ? 'var(--green)' : 'var(--red)';
+      var sinalSaldo = saldoMes > 0 ? '+' : '';
+      html += '<div style="background:rgba(255,255,255,0.03);border-radius:10px;padding:10px 12px">';
+      html += '<div style="font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:4px">Saldo mês</div>';
+      html += '<div style="font-size:15px;font-weight:700;color:'+corSaldo+'">' + sinalSaldo + fmt(saldoMes) + '</div>';
+      html += '</div>';
+    }
+    html += '</div></div>';
+
+    // Cards dos dias
+    entr.forEach(function(e) {
+      var rend = e.rendimento || 0;
+      var resg = e.resgates || 0;
+      var dsp  = new Date(e.data + 'T12:00:00').toLocaleDateString('pt-BR', {day:'2-digit',month:'2-digit',year:'numeric'});
+      var corBorda = rend >= 0 ? 'var(--green)' : 'var(--red)';
+      var corRend2 = rend >= 0 ? 'var(--green)' : 'var(--red)';
+      var sinal    = rend > 0 ? '+' : '';
+
+      html += '<div style="background:rgba(255,255,255,0.025);border:1px solid rgba(255,255,255,0.06);border-left:3px solid '+corBorda+';border-radius:12px;padding:12px 14px;margin-bottom:6px;display:flex;align-items:center;justify-content:space-between">';
+      html += '<div>';
+      html += '<div style="font-size:13px;font-weight:600;color:var(--text)">' + dsp + '</div>';
+      html += '<div style="font-size:11px;color:var(--dim);margin-top:2px">Saldo: ' + fmt(e.saldoLiq) + '</div>';
+      if (resg > 0) {
+        html += '<div style="font-size:11px;color:var(--red);margin-top:3px">↓ Resgate: ' + fmt(resg) + '</div>';
+      }
+      html += '</div>';
+      html += '<div style="text-align:right;display:flex;align-items:center;gap:8px">';
+      html += '<div>';
+      html += '<div style="font-size:18px;font-weight:700;color:'+corRend2+'">' + sinal + fmt(rend) + '</div>';
+      html += '<div style="font-size:9px;color:var(--dim)">rendimento</div>';
+      html += '</div>';
+      html += '<button class="btn-del" onclick="deleteEntry(\'' + e.data + '\',\'' + e.mes + '\')" title="Remover">✕</button>';
+      html += '</div>';
+      html += '</div>';
+    });
   });
 
-  html += '</tbody></table></div>';
   container.innerHTML = html;
 }
 
