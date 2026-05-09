@@ -1222,14 +1222,10 @@ function renderViewMes() {
     var rendAcum = entr.reduce(function(s,e){ return s + (e.rendimento||0); }, 0);
     var resgAcum = entr.reduce(function(s,e){ return s + (e.resgates||0); }, 0);
 
-    var mesPrevIdx = ordem.indexOf(mes) - 1;
-    var prevLiq = 0;
-    if (mesPrevIdx >= 0) {
-      var gp = grupos[ordem[mesPrevIdx]];
-      prevLiq = gp[gp.length - 1].saldoLiq || 0;
-    }
-    var saldoMes = prevLiq > 0 ? (last.saldoLiq - prevLiq) : null;
-    if (saldoMes !== null) acumTemp += saldoMes;
+    // Saldo Mês = Rendimento acumulado − Resgates (exclui aportes/entradas)
+    // Mesma fórmula da planilha: coluna N = Rendimento Mensal - Resgates
+    var saldoMes = rendAcum - resgAcum;
+    acumTemp += saldoMes;
 
     linhas.push({ mes: mes, entr: entr, last: last, rendAcum: rendAcum, resgAcum: resgAcum, saldoMes: saldoMes, acumulado: acumTemp });
   });
@@ -1238,14 +1234,9 @@ function renderViewMes() {
     var corRend  = row.rendAcum >= 0 ? 'var(--green)' : 'var(--red)';
     var sinalRend = row.rendAcum > 0 ? '+' : '';
 
-    var saldoMesHtml;
-    if (row.saldoMes !== null) {
-      var corSM = row.saldoMes >= 0 ? 'var(--green)' : 'var(--red)';
-      var sinalSM = row.saldoMes > 0 ? '+' : '';
-      saldoMesHtml = '<td style="text-align:right;font-size:12px;font-weight:600;color:' + corSM + '">' + sinalSM + fmt(row.saldoMes) + '</td>';
-    } else {
-      saldoMesHtml = '<td style="text-align:right;color:var(--dim)">—</td>';
-    }
+    var corSM = row.saldoMes >= 0 ? 'var(--green)' : 'var(--red)';
+    var sinalSM = row.saldoMes > 0 ? '+' : '';
+    var saldoMesHtml = '<td style="text-align:right;font-size:12px;font-weight:600;color:' + corSM + '">' + sinalSM + fmt(row.saldoMes) + '</td>';
 
     var corAcum  = row.acumulado >= 0 ? 'var(--green)' : 'var(--red)';
     var sinalAcum = row.acumulado > 0 ? '+' : '';
