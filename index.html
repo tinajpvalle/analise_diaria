@@ -196,8 +196,11 @@
       /* Stats */
       .stats-strip { padding: 0 2px; }
 
-      /* tabela: oculta colunas menos importantes */
+      /* tabela: oculta colunas menos importantes no mobile */
       .hist-tbl .col-bruto,
+      .hist-tbl .col-liq,
+      .hist-tbl .col-rend,
+      .hist-tbl .col-resg,
       .hist-tbl .col-var   { display: none; }
       .hist-tbl th, .hist-tbl td { padding: 8px 6px; font-size: 11px; }
 
@@ -1199,39 +1202,64 @@ function renderViewMes() {
   // Monta linhas — mais recente primeiro
   var html = '<div style="overflow-x:auto"><table class="hist-tbl"><thead><tr>' +
     '<th>Mês</th>' +
-    '<th style="text-align:right">Saldo Bruto</th>' +
-    '<th style="text-align:right">Saldo Líquido</th>' +
-    '<th style="text-align:right">Rendimento</th>' +
-    '<th style="text-align:right">Variação</th>' +
-    '<th style="text-align:right">Resgates</th>' +
+    '<th class="col-bruto" style="text-align:right">Saldo Bruto</th>' +
+    '<th class="col-liq" style="text-align:right">Saldo Líq.</th>' +
+    '<th class="col-rend" style="text-align:right">Rend. Mês</th>' +
+    '<th class="col-resg" style="text-align:right">Resgates</th>' +
+    '<th style="text-align:right">Saldo Mês</th>' +
+    '<th style="text-align:right">Acumulado</th>' +
     '</tr></thead><tbody>';
 
   var mesesOrdenados = ordem.slice().reverse();
-  mesesOrdenados.forEach(function(mes, idx) {
+  var saldoAcumulado = 0;
+
+  // Calcula acumulado na ordem crescente primeiro, depois inverte para exibir
+  var linhas = [];
+  var acumTemp = 0;
+  ordem.forEach(function(mes) {
     var entr    = grupos[mes];
-    var last    = entr[entr.length - 1]; // entrada mais recente do mês
+    var last    = entr[entr.length - 1];
     var rendAcum = entr.reduce(function(s,e){ return s + (e.rendimento||0); }, 0);
     var resgAcum = entr.reduce(function(s,e){ return s + (e.resgates||0); }, 0);
 
-    // Variação = último saldoLiq do mês - último saldoLiq do mês anterior
     var mesPrevIdx = ordem.indexOf(mes) - 1;
     var prevLiq = 0;
     if (mesPrevIdx >= 0) {
       var gp = grupos[ordem[mesPrevIdx]];
       prevLiq = gp[gp.length - 1].saldoLiq || 0;
     }
-    var variacao = prevLiq > 0 ? (last.saldoLiq - prevLiq) : null;
+    var saldoMes = prevLiq > 0 ? (last.saldoLiq - prevLiq) : null;
+    if (saldoMes !== null) acumTemp += saldoMes;
+
+    linhas.push({ mes: mes, entr: entr, last: last, rendAcum: rendAcum, resgAcum: resgAcum, saldoMes: saldoMes, acumulado: acumTemp });
+  });
+
+  linhas.slice().reverse().forEach(function(row) {
+    var corRend  = row.rendAcum >= 0 ? 'var(--green)' : 'var(--red)';
+    var sinalRend = row.rendAcum > 0 ? '+' : '';
+
+    var saldoMesHtml;
+    if (row.saldoMes !== null) {
+      var corSM = row.saldoMes >= 0 ? 'var(--green)' : 'var(--red)';
+      var sinalSM = row.saldoMes > 0 ? '+' : '';
+      saldoMesHtml = '<td style="text-align:right;font-size:12px;font-weight:600;color:' + corSM + '">' + sinalSM + fmt(row.saldoMes) + '</td>';
+    } else {
+      saldoMesHtml = '<td style="text-align:right;color:var(--dim)">—</td>';
+    }
+
+    var corAcum  = row.acumulado >= 0 ? 'var(--green)' : 'var(--red)';
+    var sinalAcum = row.acumulado > 0 ? '+' : '';
 
     html += '<tr>' +
-      '<td><span style="color:var(--yellow);font-size:12px;font-weight:700">' + mes + '</span>' +
-      (entr.length > 1 ? '<span style="color:var(--dim);font-size:10px;margin-left:6px">' + entr.length + ' dias</span>' : '') +
+      '<td><span style="color:var(--yellow);font-size:12px;font-weight:700">' + row.mes + '</span>' +
+      (row.entr.length > 1 ? '<span style="color:var(--dim);font-size:10px;margin-left:4px">' + row.entr.length + 'd</span>' : '') +
       '</td>' +
-      cel(last.saldoBruto, false) +
-      cel(last.saldoLiq,   false) +
-      cel(rendAcum, true) +
-      (variacao !== null ? cel(variacao, true) : '<td style="text-align:right;color:var(--dim)">—</td>') +
-      '<td style="text-align:right;font-size:12px;color:' + (resgAcum?'var(--red)':'var(--dim)') + '">' +
-        (resgAcum ? fmt(resgAcum) : '—') + '</td>' +
+      '<td class="col-bruto" style="text-align:right;font-size:12px">' + fmt(row.last.saldoBruto) + '</td>' +
+      '<td class="col-liq" style="text-align:right;font-size:12px">' + fmt(row.last.saldoLiq) + '</td>' +
+      '<td class="col-rend" style="text-align:right;font-size:12px;font-weight:600;color:' + corRend + '">' + sinalRend + fmt(row.rendAcum) + '</td>' +
+      '<td class="col-resg" style="text-align:right;font-size:12px;color:' + (row.resgAcum?'var(--red)':'var(--dim)') + '">' + (row.resgAcum ? fmt(row.resgAcum) : '—') + '</td>' +
+      saldoMesHtml +
+      '<td style="text-align:right;font-size:12px;font-weight:700;color:' + corAcum + '">' + sinalAcum + fmt(row.acumulado) + '</td>' +
       '</tr>';
   });
 
