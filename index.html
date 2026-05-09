@@ -137,6 +137,22 @@
     .btn-sm-sync:hover { background: rgba(124,155,232,0.2); }
     .btn-sm-logout { background: transparent; border-color: var(--border); color: var(--dim); }
     .btn-sm-logout:hover { border-color: rgba(232,146,124,0.4); color: var(--red); }
+    .btn-sm-cfg { background: rgba(255,255,255,0.05); border-color: var(--border); color: var(--dim); }
+    .btn-sm-cfg:hover { background: rgba(255,255,255,0.1); color: var(--text); }
+
+    /* ── MODAL SALDO BASE ─────────────────────── */
+    .modal-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.7); z-index: 1000;
+      align-items: center; justify-content: center; padding: 20px;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal-box {
+      background: #1a1a2e; border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 18px; padding: 28px 24px; width: 100%; max-width: 400px;
+    }
+    .modal-box h3 { font-size: 15px; font-weight: 700; margin-bottom: 6px; }
+    .modal-box p  { font-size: 12px; color: var(--dim); margin-bottom: 18px; line-height: 1.5; }
 
     /* ── APP BODY GRID ─────────────────────────── */
     .app-body {
@@ -475,9 +491,35 @@
       <label for="fileImport" class="btn-sm btn-sm-import" title="Importar backup do Dashboard principal" style="cursor:pointer">⬆ <span class="btn-label-full">Importar Dashboard</span><span class="btn-label-short">Importar</span></label>
       <input type="file" id="fileImport" accept=".json,application/json,text/plain,*/*" style="display:none" onchange="importFromDashboard(this)">
       <button class="btn-sm btn-sm-export" onclick="exportForDashboard()">⬇ <span class="btn-label-full">Exportar Dashboard</span><span class="btn-label-short">Exportar</span></button>
+      <button class="btn-sm btn-sm-cfg" onclick="openCfgModal()" title="Saldo Base (Acumulado)">⚙</button>
       <button class="btn-sm btn-sm-logout" onclick="doLogout()">→ <span class="btn-label-full">Sair</span><span class="btn-label-short">Sair</span></button>
     </div>
   </header>
+
+  <!-- Modal: Saldo Base -->
+  <div class="modal-overlay" id="cfgModal" onclick="if(event.target===this)closeCfgModal()">
+    <div class="modal-box">
+      <h3>⚙ Saldo Acumulado de Referência</h3>
+      <p>Informe o valor correto do <strong>Acumulado</strong> para um mês específico (da sua planilha). O app ajusta automaticamente todos os meses.</p>
+      <div class="field" style="margin-bottom:12px">
+        <label>Mês de referência</label>
+        <select id="cfgRefMes" style="width:100%;padding:10px 12px;background:var(--bg-inp);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:14px">
+          <option value="">— selecione —</option>
+        </select>
+      </div>
+      <div class="field" style="margin-bottom:20px">
+        <label>Saldo Acumulado correto (R$)</label>
+        <input type="text" id="cfgRefValor" placeholder="ex: 313525,21" style="padding:10px 12px;font-size:14px;width:100%">
+      </div>
+      <div style="display:flex;gap:10px">
+        <button class="btn-green" style="flex:1;font-size:14px;padding:12px" onclick="saveCfgModal()">Salvar</button>
+        <button onclick="clearCfgModal()" style="flex:1;font-size:13px;padding:12px;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:12px;color:var(--dim);cursor:pointer">Limpar</button>
+      </div>
+      <div style="text-align:center;margin-top:12px">
+        <a href="#" onclick="closeCfgModal();return false" style="font-size:12px;color:var(--dim)">Fechar</a>
+      </div>
+    </div>
+  </div>
 
   <!-- Stats — faixa larga acima de tudo -->
   <div style="padding:16px 24px 0;max-width:1280px;margin:0 auto;width:100%">
@@ -891,6 +933,57 @@ function reconfigurar() {
   showView('vSetup');
 }
 
+// ══════════════════════════════════════════════════════════
+//  MODAL — SALDO BASE (ACUMULADO DE REFERÊNCIA)
+// ══════════════════════════════════════════════════════════
+function openCfgModal() {
+  // Preenche select com meses disponíveis
+  var sel = document.getElementById('cfgRefMes');
+  var sorted = APP.data.slice().sort(function(a,b){ return a.data < b.data ? -1 : 1; });
+  var meses = [];
+  sorted.forEach(function(e){ if (meses.indexOf(e.mes) === -1) meses.push(e.mes); });
+  sel.innerHTML = '<option value="">— selecione —</option>';
+  meses.reverse().forEach(function(m){
+    sel.innerHTML += '<option value="' + m + '">' + m + '</option>';
+  });
+  // Preenche valores salvos
+  var cfg = getConfig();
+  if (cfg && cfg.acumRefMes) sel.value = cfg.acumRefMes;
+  if (cfg && cfg.acumRefValor != null) {
+    document.getElementById('cfgRefValor').value = String(cfg.acumRefValor).replace('.',',');
+  }
+  document.getElementById('cfgModal').classList.add('open');
+}
+
+function closeCfgModal() {
+  document.getElementById('cfgModal').classList.remove('open');
+}
+
+function saveCfgModal() {
+  var mes   = document.getElementById('cfgRefMes').value;
+  var valStr = document.getElementById('cfgRefValor').value.trim().replace(/\./g,'').replace(',','.');
+  var val   = parseFloat(valStr);
+  if (!mes || isNaN(val)) { toast('Preencha o mês e o valor corretamente', 'err'); return; }
+  var cfg = getConfig() || {};
+  cfg.acumRefMes   = mes;
+  cfg.acumRefValor = val;
+  saveConfig(cfg);
+  closeCfgModal();
+  toast('Saldo base salvo! ✓', 'ok');
+  renderViewMes();
+}
+
+function clearCfgModal() {
+  var cfg = getConfig() || {};
+  delete cfg.acumRefMes;
+  delete cfg.acumRefValor;
+  saveConfig(cfg);
+  document.getElementById('cfgRefMes').value = '';
+  document.getElementById('cfgRefValor').value = '';
+  toast('Saldo base removido', 'info');
+  renderViewMes();
+}
+
 // Auto-logout por inatividade (30 min)
 function startAutoLogout() {
   resetLogoutTimer();
@@ -1230,6 +1323,14 @@ function renderViewMes() {
     linhas.push({ mes: mes, entr: entr, last: last, rendAcum: rendAcum, resgAcum: resgAcum, saldoMes: saldoMes, acumulado: acumTemp });
   });
 
+  // Calcula offset a partir do mês de referência configurado
+  var acumOffset = 0;
+  var cfg = getConfig();
+  if (cfg && cfg.acumRefMes && cfg.acumRefValor != null) {
+    var refRow = linhas.find(function(r){ return r.mes === cfg.acumRefMes; });
+    if (refRow) acumOffset = cfg.acumRefValor - refRow.acumulado;
+  }
+
   linhas.slice().reverse().forEach(function(row) {
     var corRend  = row.rendAcum >= 0 ? 'var(--green)' : 'var(--red)';
     var sinalRend = row.rendAcum > 0 ? '+' : '';
@@ -1238,8 +1339,9 @@ function renderViewMes() {
     var sinalSM = row.saldoMes > 0 ? '+' : '';
     var saldoMesHtml = '<td style="text-align:right;font-size:12px;font-weight:600;color:' + corSM + '">' + sinalSM + fmt(row.saldoMes) + '</td>';
 
-    var corAcum  = row.acumulado >= 0 ? 'var(--green)' : 'var(--red)';
-    var sinalAcum = row.acumulado > 0 ? '+' : '';
+    var acumDisp  = row.acumulado + acumOffset;
+    var corAcum   = acumDisp >= 0 ? 'var(--green)' : 'var(--red)';
+    var sinalAcum = acumDisp > 0 ? '+' : '';
 
     html += '<tr>' +
       '<td><span style="color:var(--yellow);font-size:12px;font-weight:700">' + row.mes + '</span>' +
@@ -1250,7 +1352,7 @@ function renderViewMes() {
       '<td class="col-rend" style="text-align:right;font-size:12px;font-weight:600;color:' + corRend + '">' + sinalRend + fmt(row.rendAcum) + '</td>' +
       '<td class="col-resg" style="text-align:right;font-size:12px;color:' + (row.resgAcum?'var(--red)':'var(--dim)') + '">' + (row.resgAcum ? fmt(row.resgAcum) : '—') + '</td>' +
       saldoMesHtml +
-      '<td style="text-align:right;font-size:12px;font-weight:700;color:' + corAcum + '">' + sinalAcum + fmt(row.acumulado) + '</td>' +
+      '<td style="text-align:right;font-size:12px;font-weight:700;color:' + corAcum + '">' + sinalAcum + fmt(acumDisp) + '</td>' +
       '</tr>';
   });
 
