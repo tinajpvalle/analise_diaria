@@ -1433,7 +1433,9 @@ function renderViewDia() {
       var corRend2 = rend >= 0 ? 'var(--green)' : 'var(--red)';
       var sinal    = rend > 0 ? '+' : '';
 
-      html += '<div style="background:rgba(255,255,255,0.025);border:1px solid rgba(255,255,255,0.06);border-left:3px solid '+corBorda+';border-radius:12px;padding:12px 14px;margin-bottom:6px;display:flex;align-items:center;justify-content:space-between">';
+      var cardId = 'card-' + e.data.replace(/-/g,'');
+      html += '<div style="background:rgba(255,255,255,0.025);border:1px solid rgba(255,255,255,0.06);border-left:3px solid '+corBorda+';border-radius:12px;padding:12px 14px;margin-bottom:6px;cursor:pointer" onclick="toggleCardDetail(\'' + cardId + '\')">';
+      html += '<div style="display:flex;align-items:center;justify-content:space-between">';
       html += '<div>';
       html += '<div style="font-size:13px;font-weight:600;color:var(--text)">' + dsp + '</div>';
       html += '<div style="font-size:11px;color:var(--dim);margin-top:2px">Saldo: ' + fmt(e.saldoLiq) + '</div>';
@@ -1446,7 +1448,20 @@ function renderViewDia() {
       html += '<div style="font-size:18px;font-weight:700;color:'+corRend2+'">' + sinal + fmt(rend) + '</div>';
       html += '<div style="font-size:9px;color:var(--dim)">rendimento</div>';
       html += '</div>';
-      html += '<button class="btn-del" onclick="deleteEntry(\'' + e.data + '\',\'' + e.mes + '\')" title="Remover">✕</button>';
+      html += '<button class="btn-del" onclick="event.stopPropagation();deleteEntry(\'' + e.data + '\',\'' + e.mes + '\')" title="Remover">✕</button>';
+      html += '</div>';
+      html += '</div>';
+      html += '<div id="' + cardId + '" style="display:none;margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,0.08)">';
+      html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">';
+      html += '<div style="background:rgba(255,255,255,0.04);border-radius:8px;padding:8px 10px">';
+      html += '<div style="font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:3px">Saldo Bruto</div>';
+      html += '<div style="font-size:13px;font-weight:600;color:var(--text)">' + fmt(e.saldoBruto || 0) + '</div>';
+      html += '</div>';
+      html += '<div style="background:rgba(255,255,255,0.04);border-radius:8px;padding:8px 10px">';
+      html += '<div style="font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:3px">Saldo Líquido</div>';
+      html += '<div style="font-size:13px;font-weight:600;color:var(--text)">' + fmt(e.saldoLiq || 0) + '</div>';
+      html += '</div>';
+      html += '</div>';
       html += '</div>';
       html += '</div>';
     });
@@ -1455,6 +1470,15 @@ function renderViewDia() {
   container.innerHTML = html;
 }
 
+//  TOGGLE DETALHE DO CARD
+// ══════════════════════════════════════════════════════════
+function toggleCardDetail(id) {
+  var el = document.getElementById(id);
+  if (!el) return;
+  el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+
+// ══════════════════════════════════════════════════════════
 // ══════════════════════════════════════════════════════════
 //  IMPORTAR DO DASHBOARD PRINCIPAL
 // ══════════════════════════════════════════════════════════
